@@ -1,0 +1,35 @@
+<idea-plugin>
+    <id>be.catsandcoding.pairprogramming</id>
+    <name>PairProgramming</name>
+    <vendor email="harald.brinkhof@gmail.com" url="http://www.catsandcoding.be">Cats and coding make for a great time but not a company.</vendor>
+
+    <description><![CDATA[
+    This is a plugin that aims to facilitate pair programming by duplicating keystrokes and file actions.
+    ]]></description>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+        <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService"
+                        serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ContentChangeServiceImpl"/>
+        <projectService
+                serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ChangedContentCacheService"
+                serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ChangedContentCacheServiceImpl"/>
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+        <action id="be.catsandcoding.pairprogramming.intellijplugin.action.ActivateContentListener"
+                class="be.catsandcoding.pairprogramming.intellijplugin.action.ActivateContentListener" text="ActivateContentListener"
+                description="Activates the content change listener for this project">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+    </actions>
+    <projectListeners>
+        <listener class="be.catsandcoding.pairprogramming.intellijplugin.listener.FileChangeListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener" />
+    </projectListeners>
+    <idea-version since-build="2019.1"/>
+</idea-plugin>
