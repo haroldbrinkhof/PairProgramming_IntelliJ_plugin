@@ -34,7 +34,7 @@ public class BufferContentChangeListener implements DocumentListener {
     private final ChangedContentCacheService changedContentCacheService;
     private final Project project;
 
-    public BufferContentChangeListener(Project project) throws IOException {
+    public BufferContentChangeListener(Project project) {
         this.project = project;
         contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
         changedContentCacheService = ServiceManager.getService(project, ChangedContentCacheService.class);

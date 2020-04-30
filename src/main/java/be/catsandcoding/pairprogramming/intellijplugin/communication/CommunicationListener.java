@@ -75,7 +75,22 @@ final public class CommunicationListener {
                         CommandMessage commandMessage = mapper.readValue(command, CommandMessage.class);
                         if(commandMessage.getCommandMessageType() == CommandMessage.Type.CONTENT_CHANGE){
                             ContentChangeMessage ctMsg = mapper.readValue(command, ContentChangeMessage.class);
-                            contentChangeService.performChange(ctMsg);
+                            contentChangeService.handle(ctMsg);
+                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.DELETE_FILE) {
+                            DeleteFileMessage dfMsg = mapper.readValue(command, DeleteFileMessage.class);
+                            contentChangeService.handle(dfMsg);
+                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.NEW_FILE) {
+                            CreateFileMessage cfMsg = mapper.readValue(command, CreateFileMessage.class);
+                            contentChangeService.handle(cfMsg);
+                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.RENAME_FILE) {
+                            RenameFileMessage rnMsg = mapper.readValue(command, RenameFileMessage.class);
+                            contentChangeService.handle(rnMsg);
+                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.COPY_FILE) {
+                            CopyFileMessage cpMsg = mapper.readValue(command, CopyFileMessage.class);
+                            contentChangeService.handle(cpMsg);
+                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.MOVE_FILE) {
+                            MoveFileMessage mvMsg = mapper.readValue(command, MoveFileMessage.class);
+                            contentChangeService.handle(mvMsg);
                         }
                     }
                     Thread.sleep(10);
@@ -84,9 +99,11 @@ final public class CommunicationListener {
                     System.out.println(e.getMessage());
                 } catch (JsonMappingException e) {
                     e.printStackTrace();
-                } catch (JsonProcessingException e) {
+                }
+                catch (JsonProcessingException e) {
                     e.printStackTrace();
-                } catch (IOException e) {
+                }
+                catch (IOException e) {
                     e.printStackTrace();
                 }
             } while(!stopRunning);

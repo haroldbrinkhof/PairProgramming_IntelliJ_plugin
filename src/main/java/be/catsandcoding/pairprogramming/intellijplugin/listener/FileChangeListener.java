@@ -1,6 +1,9 @@
 package be.catsandcoding.pairprogramming.intellijplugin.listener;
 
-import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
+import be.catsandcoding.pairprogramming.intellijplugin.communication.*;
+import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectLocator;
@@ -9,13 +12,20 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 
 public class FileChangeListener implements BulkFileListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private final ProjectLocator projectLocator = ProjectLocator.getInstance();
+    private final ContentChangeService contentChangeService;
+    private final Project project;
 
+    public FileChangeListener(Project project){
+        this.project = project;
+        contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
 
+    }
     @Override
     public void before(@NotNull List<? extends VFileEvent> events) {
 
@@ -46,23 +56,79 @@ public class FileChangeListener implements BulkFileListener {
 
     }
     private void handleFileEvent(VFileDeleteEvent event){
+        System.out.println("DELETE: " + event.getFile().getPath());
+        String fileName = event.getFile().getPath();
+        DeleteFileMessage dfMsg = new DeleteFileMessage(fileName.replace(contentChangeService.getProjectRoot(),""));
+        try {
+            communicationService.sendMessage(new ObjectMapper().writeValueAsString(dfMsg));
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
         communicationService.showNotification("DELETE " + event.getFile().getName());
     }
     private void handleFileEvent(VFileMoveEvent event){
-        communicationService.showNotification("MOVE" + event.getOldPath() + " to " + event.getNewPath());
+        System.out.println("MOVE: " + event.getOldPath() + " to " + event.getNewPath());
+        String oldPath = event.getOldPath();
+        String newPath = event.getNewPath();
+        MoveFileMessage mvMsg = new MoveFileMessage(oldPath.replace(contentChangeService.getProjectRoot(), ""),
+                newPath.replace(contentChangeService.getProjectRoot(), ""),
+                event.getFile().isDirectory());
+
+        try {
+            communicationService.sendMessage(new ObjectMapper().writeValueAsString(mvMsg));
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        communicationService.showNotification("MOVE " + event.getOldPath() + " to " + event.getNewPath());
     }
     private void handleFileEvent(VFileCopyEvent event){
+        String oldPath = event.getFile().getPath();
+        String newPath = event.getNewParent().getPath() + "/" + event.getNewChildName();
+        System.out.println("COPY " + oldPath + " => " + newPath);
+        CopyFileMessage cpMsg = new CopyFileMessage(oldPath.replace(contentChangeService.getProjectRoot(), ""),
+                newPath.replace(contentChangeService.getProjectRoot(), ""),
+                event.getFile().isDirectory());
+        try {
+            communicationService.sendMessage(new ObjectMapper().writeValueAsString(cpMsg));
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
         communicationService.showNotification("COPY" + event.getNewParent() + " " + event.getNewChildName());
     }
     private void handleFileEvent(VFilePropertyChangeEvent event){
         String property = event.getPropertyName();
         String newPath = event.getNewPath();
         String oldPath = event.getOldPath();
+        if(!oldPath.equals(newPath)){
+            RenameFileMessage rnMsg = new RenameFileMessage(oldPath.replace(contentChangeService.getProjectRoot(),""),
+                    newPath.replace(contentChangeService.getProjectRoot(), ""),
+                    event.getFile().isDirectory());
+            try {
+                communicationService.sendMessage(new ObjectMapper().writeValueAsString(rnMsg));
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+        }
+        System.out.println("CHANGE NAME: " + oldPath + " => " + newPath);
         communicationService.showNotification("PROPERTY CHANGE " + property + "\n" + newPath + " from " + oldPath);
     }
     private void handleFileEvent(VFileCreateEvent event){
         VirtualFile file = event.getFile();
-        String fileName = file == null?"":file.getName();
+        String fileName = event.getFile().getPath();
+        CreateFileMessage cfMsg = new CreateFileMessage(fileName.replace(contentChangeService.getProjectRoot(),""),
+                file.isDirectory());
+
+        try {
+            communicationService.sendMessage(new ObjectMapper().writeValueAsString(cfMsg));
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        System.out.println("CREATE: " + fileName);
         communicationService.showNotification("CREATE: " + fileName);
 
     }

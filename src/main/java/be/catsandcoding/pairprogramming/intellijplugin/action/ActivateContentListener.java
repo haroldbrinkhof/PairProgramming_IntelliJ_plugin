@@ -3,18 +3,22 @@ package be.catsandcoding.pairprogramming.intellijplugin.action;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationListener;
 import be.catsandcoding.pairprogramming.intellijplugin.listener.BufferContentChangeListener;
+import be.catsandcoding.pairprogramming.intellijplugin.listener.FileChangeListener;
 import be.catsandcoding.pairprogramming.intellijplugin.ui.PairingDialogNotConnected;
 import com.intellij.ide.DataManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+
+import static com.intellij.openapi.vfs.VirtualFileManager.VFS_CHANGES;
 
 
 public class ActivateContentListener extends AnAction {
@@ -35,6 +39,8 @@ public class ActivateContentListener extends AnAction {
             try {
                 EditorFactory.getInstance().getEventMulticaster()
                         .addDocumentListener(new BufferContentChangeListener(project), project);
+                ApplicationManager.getApplication().getMessageBus().connect(project)
+                        .subscribe(VFS_CHANGES, new FileChangeListener(project));
                 PairingDialogNotConnected pd = new PairingDialogNotConnected();
                 pd.shouldCloseOnCross();
                 if(pd.showAndGet()){
