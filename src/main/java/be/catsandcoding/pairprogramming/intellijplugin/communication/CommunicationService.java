@@ -73,12 +73,14 @@ final public class CommunicationService {
     }
 
     public void startConnection(String host, int port) {
+        setPort(port);
+        setHost(host);
         context = new ZContext();
         zmqConnection = context.createSocket(SocketType.DEALER);
         zmqConnection.setIdentity(identity.getBytes(ZMQ.CHARSET));
         zmqConnection.connect(String.format("tcp://%s:%d", host, port));
     }
-    private void sendMessage(String identifier, String msg) {
+    private void sendMessage(String msg) {
         if(zmqConnection != null) {
             zmqConnection.send(msg.getBytes(ZMQ.CHARSET), 0);
         }
@@ -87,7 +89,7 @@ final public class CommunicationService {
     public void sendMessage(CommandMessage msg){
         try {
             System.out.println("SENDING MSG: " + new ObjectMapper().writeValueAsString(msg));
-            sendMessage(getIdentity(), new ObjectMapper().writeValueAsString(msg));
+            sendMessage(new ObjectMapper().writeValueAsString(msg));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
