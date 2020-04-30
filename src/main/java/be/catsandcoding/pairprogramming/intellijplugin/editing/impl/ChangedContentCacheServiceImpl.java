@@ -13,8 +13,8 @@ public class ChangedContentCacheServiceImpl implements ChangedContentCacheServic
 
     private final CopyOnWriteArrayList<PriorToChangeContentData> cache = new CopyOnWriteArrayList<>();
 
-    public boolean addToCache(PriorToChangeContentData contentData){
-        return cache.addIfAbsent(contentData);
+    public void addToCache(PriorToChangeContentData contentData){
+        cache.addIfAbsent(contentData);
     }
 
     public Optional<PriorToChangeContentData> getFromCache(String filename, long modificationTimeStamp){
@@ -24,8 +24,8 @@ public class ChangedContentCacheServiceImpl implements ChangedContentCacheServic
         return Optional.ofNullable(cache.get(index));
     }
 
-    public boolean removeFromCache(PriorToChangeContentData toRemove){
-        return cache.remove(toRemove);
+    public void removeFromCache(PriorToChangeContentData toRemove){
+        cache.remove(toRemove);
     }
 
     public void clearCache(){

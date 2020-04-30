@@ -22,8 +22,8 @@ final public class CommunicationService {
     private final NotificationGroup NOTIFICATION_GROUP = new NotificationGroup("Pair Programming", NotificationDisplayType.BALLOON, true);
     private ZMQ.Socket zmqConnection;
     private ZContext context;
-    private static Random rand = new Random(System.nanoTime());
-    private String identity = String.format(
+    private static final Random rand = new Random(System.nanoTime());
+    private final String identity = String.format(
             "%04X-%04X", rand.nextInt(), rand.nextInt()
     );
     private String sessionId = "";

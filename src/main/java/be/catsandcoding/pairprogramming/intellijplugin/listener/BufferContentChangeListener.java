@@ -122,15 +122,6 @@ public class BufferContentChangeListener implements DocumentListener {
         return (file != null && file.isValid())?file.getPath():"";
     }
 
-    private String showSpecialChars(String input){
-        if(input == null) return "";
-        return input.replace("\n","%n")
-                .replace("\r","%r")
-                .replace(" ", ".")
-                .replace("\t", "%t");
-
-
-    }
 
     @Override
     public void bulkUpdateStarting(@NotNull Document document) {
