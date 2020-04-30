@@ -1,4 +1,4 @@
-package be.catsandcoding.pairprogramming.intellijplugin.communication;
+package be.catsandcoding.pairprogramming.intellijplugin.communication.messages;
 
 public class ContentChangeMessage extends CommandMessage {
     public enum Action {
@@ -13,23 +13,22 @@ public class ContentChangeMessage extends CommandMessage {
     private String newContent;
 
     private Action action;
-    private String actorId;
     private String projectBasePath;
     private String fileName;
     private String patch;
     private long oldTimeStamp;
     private long currentTimeStamp;
-    protected ContentChangeMessage(){} // (de)serialisation necessity
+    protected ContentChangeMessage(){super();} // (de)serialisation necessity
 
     public ContentChangeMessage(Action action, ContentPosition startPosition, ContentPosition endPosition,
-                                String oldContent, String newContent, String actorId, String projectBasePath,
+                                String oldContent, String newContent, String actorId, String sessionId, String projectBasePath,
                                 String fileName, String patch, long oldTimeStamp, long currentTimeStamp){
+        super();
         this.action = action;
         this.startPosition = startPosition;
         this.endPosition = endPosition;
         this.oldContent = oldContent;
         this.newContent = newContent;
-        this.actorId = actorId;
         this.projectBasePath = projectBasePath;
         this.fileName = fileName;
         this.patch = patch;
@@ -37,6 +36,8 @@ public class ContentChangeMessage extends CommandMessage {
         this.currentTimeStamp = currentTimeStamp;
 
         setCommandMessageType(Type.CONTENT_CHANGE);
+        setActorId(actorId);
+        setSessionId(sessionId);
     }
 
     public long getOldTimeStamp() {
@@ -61,10 +62,6 @@ public class ContentChangeMessage extends CommandMessage {
     }
     public String getNewContent(){
         return newContent;
-    }
-
-    public String getActorId() {
-        return actorId;
     }
 
     public String getProjectBasePath() {

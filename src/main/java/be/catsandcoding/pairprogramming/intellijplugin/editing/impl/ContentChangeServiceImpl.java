@@ -1,6 +1,6 @@
 package be.catsandcoding.pairprogramming.intellijplugin.editing.impl;
 
-import be.catsandcoding.pairprogramming.intellijplugin.communication.*;
+import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -30,15 +30,25 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         this.fileDocumentManager = FileDocumentManager.getInstance();
     }
 
+    @Override
     public String getProjectRoot(){
         VirtualFile where = ModuleRootManager.getInstance(ModuleManager.getInstance(project).getModules()[0]).getContentRoots()[0];
         return where.getPath();
     }
 
-    public void handle(final MoveFileMessage msg){
+    @Override
+    public String getProjectIndependentPath(String path){
+        return path.replace(getProjectRoot(), "");
+    }
 
-        final String from = getProjectRoot() + msg.getFrom().replace("World", "Copy");
-        final String to = getProjectRoot() + msg.getTo().replace("World", "Copy");
+    public String transformToProjectPath(String path) {
+        return getProjectRoot() + path;
+    }
+
+    @Override
+    public void handle(final MoveFileMessage msg){
+        final String from = transformToProjectPath(msg.getFrom());
+        final String to = transformToProjectPath(msg.getTo());
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
         final VirtualFile toLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + to.substring(0, to.lastIndexOf("/") + 1));
 
@@ -56,9 +66,11 @@ public class ContentChangeServiceImpl implements ContentChangeService {
                     });
         }
     }
+
+    @Override
     public void handle(final CopyFileMessage msg){
-        final String from = getProjectRoot() + msg.getFrom().replace("World", "Copy");
-        final String to = getProjectRoot() + msg.getTo().replace("World", "Copy");
+        final String from = transformToProjectPath(msg.getFrom());
+        final String to = transformToProjectPath(msg.getTo());
 
         System.out.println("HANDLE COPY: " + from + " => " + to);
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
@@ -78,9 +90,10 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         }
     }
 
+    @Override
     public void handle(final RenameFileMessage msg){
-        final String from = getProjectRoot() + msg.getFrom().replace("World", "Copy");
-        final String to = getProjectRoot() + msg.getTo().replace("World", "Copy");
+        final String from = transformToProjectPath(msg.getFrom());
+        final String to = transformToProjectPath(msg.getTo());
 
         System.out.println("HANDLE CHANGE NAME: " + from + " => " + to);
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
@@ -97,8 +110,9 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         }
     }
 
+    @Override
     public void handle(final DeleteFileMessage msg){
-        String filename = getProjectRoot() + msg.getFileName().replace("World", "Copy");
+        String filename = transformToProjectPath(msg.getFileName());
         final VirtualFile file = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
         if(file == null || !ProjectFileIndex.SERVICE.getInstance(project).isInContent(file)) return ;
         WriteCommandAction.runWriteCommandAction(project,
@@ -111,42 +125,44 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         });
     }
 
+    @Override
     public void handle(final CreateFileMessage msg){
-        String filename = getProjectRoot() + msg.getFileName().replace("World", "Copy");
+        String filename = transformToProjectPath(msg.getFileName());
         System.out.println("CREATING FOR: " + filename);
         final VirtualFile file = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
         if(file != null) return;
-        if(OS.isWindows()) filename = filename.replace("/","\\");
 
         final String fileToCreate = filename;
-        WriteCommandAction.runWriteCommandAction(project,
-                ()  -> {
-                    try {
-
-                        // Create the empty file with default permissions, etc.
-                        Path path = Paths.get(fileToCreate);
-                        if(msg.isDirectory()){
-                            System.out.println("creating directory");
-                            Files.createDirectory(path);
-                        } else {
-                            System.out.println("creating file");
-                            Files.createFile(path);
-                        }
-                    } catch (FileAlreadyExistsException x) {
-                        System.err.format("file named %s" +
-                                " already exists%n", fileToCreate);
-                    } catch (IOException x) {
-                        // Some other sort of failure, such as permissions.
-                        System.err.format("createFile error: %s%n", x);
-                    }
-                });
+        WriteCommandAction.runWriteCommandAction(project, ()  -> tryToCreate(msg, fileToCreate) );
 
         virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
 
     }
 
+    private void tryToCreate(CreateFileMessage msg, String fileToCreate) {
+        try {
+
+            Path path = Paths.get(safeguardForWindowsIfNecessary(fileToCreate));
+            if(msg.isDirectory()){
+                Files.createDirectory(path);
+            } else {
+                Files.createFile(path);
+            }
+        } catch (FileAlreadyExistsException x) {
+            System.err.format("file named %s" +
+                    " already exists%n", fileToCreate);
+        } catch (IOException x) {
+            x.printStackTrace();
+        }
+    }
+
+    private String safeguardForWindowsIfNecessary(String fileToCreate) {
+        return OS.isWindows()?fileToCreate.replace("/","\\"):fileToCreate;
+    }
+
+    @Override
     public void handle(final ContentChangeMessage msg){
-        String filename = getProjectRoot() + msg.getFileName().replace("World", "Copy");
+        String filename = transformToProjectPath(msg.getFileName());
         System.out.println("perfomChange: determine VirtualFile " + filename);
         final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
         if(toChange == null) return;
@@ -156,13 +172,18 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         if(contents == null) return;
 
         System.out.println("changing contents of file: " + toChange.getPath());
-        diff_match_patch dmp = new diff_match_patch();
-        LinkedList<diff_match_patch.Patch> patch = (LinkedList<diff_match_patch.Patch>) dmp.patch_fromText(msg.getPatch());
-        final Object[] results = dmp.patch_apply(patch,contents.getText());
-        System.out.println("NEW TEXT: " + results[0].toString());
+        final String result = applyPatchToContents(msg, contents);
+
+        System.out.println("NEW TEXT: " + result);
         WriteCommandAction.runWriteCommandAction(project, () -> {
-                contents.setText(results[0].toString());
+                contents.setText(result);
                 fileDocumentManager.saveDocument(contents);
             } );
+    }
+
+    private String applyPatchToContents(ContentChangeMessage msg, Document contents) {
+        diff_match_patch dmp = new diff_match_patch();
+        LinkedList<diff_match_patch.Patch> patch = (LinkedList<diff_match_patch.Patch>) dmp.patch_fromText(msg.getPatch());
+        return dmp.patch_apply(patch,contents.getText())[0].toString();
     }
 }

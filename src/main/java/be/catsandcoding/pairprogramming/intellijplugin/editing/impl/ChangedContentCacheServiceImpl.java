@@ -31,4 +31,5 @@ public class ChangedContentCacheServiceImpl implements ChangedContentCacheServic
     public void clearCache(){
         cache.clear();
     }
+
 }

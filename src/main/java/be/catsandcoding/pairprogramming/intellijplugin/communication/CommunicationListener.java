@@ -1,29 +1,24 @@
 package be.catsandcoding.pairprogramming.intellijplugin.communication;
 
-import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
+import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.command.CommandProcessor;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import org.zeromq.*;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
 @Service
 final public class CommunicationListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private ContentChangeService contentChangeService;
     private boolean stopRunning = false;
-    private Project project;
 
 
     private void reset(){
@@ -36,7 +31,6 @@ final public class CommunicationListener {
     public void start(Project project) {
         reset();
         Application app = ApplicationManager.getApplication();
-        this.project = project;
         if(app != null) {
             contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
             app.executeOnPooledThread(new ListenAndAct());
@@ -46,69 +40,79 @@ final public class CommunicationListener {
     }
 
     private class ListenAndAct implements Runnable {
-        private ZContext context;
-        private ZMQ.Socket zmqConnection;
+        private final ZMQ.Socket zmqConnection = communicationService.createConnectionInContext(SocketType.SUB);
+
 
         @Override
         public void run() {
-            context = communicationService.getContext();
-            zmqConnection = context.createSocket(SocketType.SUB);
-            zmqConnection.subscribe("");
+            zmqConnection.subscribe(communicationService.getSessionId().getBytes(ZMQ.CHARSET));
+            zmqConnection.connect(String.format("tcp://%s:%d",communicationService.getHost(), communicationService.getSubPort()));
+            System.out.println("CommunicationListener started: " + zmqConnection);
 
-            zmqConnection.connect("tcp://127.0.0.1:5571");
-            System.out.println("CommunicationListener started: " + zmqConnection );
+            listenForCommandsAndActOnThem();
+
+            System.out.println("CommunicationListener closed");
+            communicationService.stopConnectionInContext(zmqConnection);
+        }
+
+        private void listenForCommandsAndActOnThem() {
             do {
                 try {
                     System.out.println("waiting for a message from the server");
                     String command = zmqConnection.recvStr();
                     System.out.println("got a message from the server");
 
-                    if (!command.isEmpty()) {
+                    if (!command.isEmpty() && !command.equals(communicationService.getSessionId())) {
                         System.out.println(command);
-                        //for(String url: contentChangeService.getProjectRoot()) {
-                            System.out.println("PROJECT: " + contentChangeService.getProjectRoot());
-                        //}
-                        //communicationService.showNotification(command);
-                        ObjectMapper mapper = new ObjectMapper()
-                                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-                        CommandMessage commandMessage = mapper.readValue(command, CommandMessage.class);
-                        if(commandMessage.getCommandMessageType() == CommandMessage.Type.CONTENT_CHANGE){
-                            ContentChangeMessage ctMsg = mapper.readValue(command, ContentChangeMessage.class);
-                            contentChangeService.handle(ctMsg);
-                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.DELETE_FILE) {
-                            DeleteFileMessage dfMsg = mapper.readValue(command, DeleteFileMessage.class);
-                            contentChangeService.handle(dfMsg);
-                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.NEW_FILE) {
-                            CreateFileMessage cfMsg = mapper.readValue(command, CreateFileMessage.class);
-                            contentChangeService.handle(cfMsg);
-                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.RENAME_FILE) {
-                            RenameFileMessage rnMsg = mapper.readValue(command, RenameFileMessage.class);
-                            contentChangeService.handle(rnMsg);
-                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.COPY_FILE) {
-                            CopyFileMessage cpMsg = mapper.readValue(command, CopyFileMessage.class);
-                            contentChangeService.handle(cpMsg);
-                        } else if (commandMessage.getCommandMessageType() == CommandMessage.Type.MOVE_FILE) {
-                            MoveFileMessage mvMsg = mapper.readValue(command, MoveFileMessage.class);
-                            contentChangeService.handle(mvMsg);
-                        }
+                        System.out.println("PROJECT: " + contentChangeService.getProjectRoot());
+                        handleCommand(command);
                     }
                     Thread.sleep(10);
-                } catch(InterruptedException e){
+                } catch(InterruptedException | IOException e){
                    e.printStackTrace();
-                    System.out.println(e.getMessage());
-                } catch (JsonMappingException e) {
-                    e.printStackTrace();
-                }
-                catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
                 }
             } while(!stopRunning);
-            System.out.println("CommunicationListener closed");
-            zmqConnection.close();
+        }
+
+        private void handleCommand(String command) throws JsonProcessingException {
+            ObjectMapper permissiveMapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            ObjectMapper mapper = new ObjectMapper();
+
+            CommandMessage commandMessage = permissiveMapper.readValue(command, CommandMessage.class);
+            if(weIssuedThis(commandMessage)) return;
+
+            switch(commandMessage.getCommandMessageType()){
+                case CONTENT_CHANGE:
+                    ContentChangeMessage ctMsg = mapper.readValue(command, ContentChangeMessage.class);
+                    contentChangeService.handle(ctMsg);
+                    break;
+                case DELETE_FILE:
+                    DeleteFileMessage dfMsg = mapper.readValue(command, DeleteFileMessage.class);
+                    contentChangeService.handle(dfMsg);
+                    break;
+                case NEW_FILE:
+                    CreateFileMessage cfMsg = mapper.readValue(command, CreateFileMessage.class);
+                    contentChangeService.handle(cfMsg);
+                    break;
+                case RENAME_FILE:
+                    RenameFileMessage rnMsg = mapper.readValue(command, RenameFileMessage.class);
+                    contentChangeService.handle(rnMsg);
+                    break;
+                case COPY_FILE:
+                    CopyFileMessage cpMsg = mapper.readValue(command, CopyFileMessage.class);
+                    contentChangeService.handle(cpMsg);
+                    break;
+                case MOVE_FILE:
+                    MoveFileMessage mvMsg = mapper.readValue(command, MoveFileMessage.class);
+                    contentChangeService.handle(mvMsg);
+                    break;
+            }
+
+        }
+
+        private boolean weIssuedThis(CommandMessage commandMessage) {
+            return commandMessage.getActorId().equals(communicationService.getIdentity());
         }
     }
 }

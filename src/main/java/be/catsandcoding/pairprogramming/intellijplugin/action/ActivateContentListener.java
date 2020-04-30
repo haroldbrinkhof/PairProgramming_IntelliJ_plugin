@@ -16,8 +16,6 @@ import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-
 import static com.intellij.openapi.vfs.VirtualFileManager.VFS_CHANGES;
 
 
@@ -45,14 +43,11 @@ public class ActivateContentListener extends AnAction {
                 pd.shouldCloseOnCross();
                 if(pd.showAndGet()){
                     System.out.println("password: " + pd.getPassword() + " session-name: " + pd.getSessionName());
-                    try {
-                        communicationService.startConnection(pd.getAddress(), pd.getPort());
-                        communicationService.showNotification("Connection succeeded: " + pd.getAddress() + ":" + pd.getPort());
-                        communicationListener.stop();
-                        communicationListener.start(project);
-                    } catch (IOException e) {
-                        communicationService.showNotification("Connection failed: " + pd.getAddress() + ":" + pd.getPort());
-                    }
+                    communicationService.setSessionId(pd.getSessionName());
+                    communicationService.startConnection(pd.getAddress(), pd.getPort());
+                    communicationService.showNotification("Connection succeeded: " + pd.getAddress() + ":" + pd.getPort());
+                    communicationListener.stop();
+                    communicationListener.start(project);
                 }
 
             } catch(Exception e){

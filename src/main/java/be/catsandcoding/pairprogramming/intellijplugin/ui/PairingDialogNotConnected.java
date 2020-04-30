@@ -8,8 +8,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
-public class PairingDialogNotConnected extends DialogWrapper {
+import static be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService.DEFAULT_ADDRESS;
+import static be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService.DEFAULT_PORT;
 
+public class PairingDialogNotConnected extends DialogWrapper {
     private final JTextField sessionName = new JTextField();
     private final JTextField password = new JTextField();
     private final JToggleButton readOnly = new JCheckBox();
@@ -28,6 +30,9 @@ public class PairingDialogNotConnected extends DialogWrapper {
     protected JComponent createCenterPanel() {
         JPanel dialogPanel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
+
+        port.setText(Integer.toString(DEFAULT_PORT));
+        address.setText(DEFAULT_ADDRESS);
 
         JLabel sessionNameLabel = new JLabel("Session name: ");
         constraints.gridx = 0;

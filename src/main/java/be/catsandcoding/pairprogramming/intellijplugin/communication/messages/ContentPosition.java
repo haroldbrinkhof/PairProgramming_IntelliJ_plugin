@@ -1,10 +1,10 @@
-package be.catsandcoding.pairprogramming.intellijplugin.communication;
+package be.catsandcoding.pairprogramming.intellijplugin.communication.messages;
 
 public final class ContentPosition {
     private int line;
     private int column;
 
-    protected ContentPosition(){}
+    protected ContentPosition(){} // (de)serialisation necessity
     public ContentPosition(int line, int column){
         this.line = line;
         this.column = column;
