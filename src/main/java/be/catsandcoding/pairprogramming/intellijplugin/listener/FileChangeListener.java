@@ -5,7 +5,6 @@ import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectLocator;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.*;
@@ -15,7 +14,6 @@ import java.util.List;
 
 public class FileChangeListener implements BulkFileListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
-    private final ProjectLocator projectLocator = ProjectLocator.getInstance();
     private final ContentChangeService contentChangeService;
 
     public FileChangeListener(Project project){
@@ -48,12 +46,10 @@ public class FileChangeListener implements BulkFileListener {
             else {
                 handleFileEvent(event);
             }
-            Project guess = projectLocator.guessProjectForFile(event.getFile());
-            String projectName = guess == null?"":guess.getName();
-            communicationService.showNotification("PROJECT: " + projectName);
         }
 
     }
+
     private void handleFileEvent(VFileDeleteEvent event){
         System.out.println("DELETE: " + event.getFile().getPath());
         String fileName = event.getFile().getPath();
