@@ -6,14 +6,12 @@ public class RenameFileMessage extends CommandMessage {
     private boolean directory;
 
     public RenameFileMessage(){super();} // (de)serialisation necessity
-    public RenameFileMessage(String from, String to, boolean isDirectory, String actorId, String sessionId){
+    public RenameFileMessage(String from, String to, boolean isDirectory){
         super();
         this.from = from;
         this.to = to;
         directory = isDirectory;
         setCommandMessageType(Type.RENAME_FILE);
-        setActorId(actorId);
-        setSessionId(sessionId);
     }
 
     public String getFrom() {

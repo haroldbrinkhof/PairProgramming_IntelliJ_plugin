@@ -21,7 +21,7 @@ public class ContentChangeMessage extends CommandMessage {
     protected ContentChangeMessage(){super();} // (de)serialisation necessity
 
     public ContentChangeMessage(Action action, ContentPosition startPosition, ContentPosition endPosition,
-                                String oldContent, String newContent, String actorId, String sessionId, String projectBasePath,
+                                String oldContent, String newContent, String projectBasePath,
                                 String fileName, String patch, long oldTimeStamp, long currentTimeStamp){
         super();
         this.action = action;
@@ -36,8 +36,6 @@ public class ContentChangeMessage extends CommandMessage {
         this.currentTimeStamp = currentTimeStamp;
 
         setCommandMessageType(Type.CONTENT_CHANGE);
-        setActorId(actorId);
-        setSessionId(sessionId);
     }
 
     public long getOldTimeStamp() {

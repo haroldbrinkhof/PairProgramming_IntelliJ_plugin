@@ -6,12 +6,10 @@ public class DeleteFileMessage extends CommandMessage{
     public DeleteFileMessage(){ // (de)serialisation necessity
         super();
     }
-    public DeleteFileMessage(String fileName, String actorId, String sessionId){
+    public DeleteFileMessage(String fileName){
         super();
         this.fileName = fileName;
         setCommandMessageType(Type.DELETE_FILE);
-        setActorId(actorId);
-        setSessionId(sessionId);
     }
 
     public String getFileName() {

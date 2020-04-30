@@ -11,7 +11,7 @@ public class CommandMessage {
         return actorId;
     }
 
-    protected void setActorId(String actorId) {
+    public void setActorId(String actorId) {
         this.actorId = actorId;
     }
 
@@ -19,7 +19,7 @@ public class CommandMessage {
         return sessionId;
     }
 
-    protected void setSessionId(String sessionId) {
+    public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
 

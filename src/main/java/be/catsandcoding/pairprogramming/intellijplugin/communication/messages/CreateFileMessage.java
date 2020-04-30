@@ -5,13 +5,11 @@ public class CreateFileMessage extends CommandMessage {
     private boolean directory;
 
     public CreateFileMessage(){ super();} // (de)serialisation necessity
-    public CreateFileMessage(String fileName, boolean directory, String actorId, String sessionId){
+    public CreateFileMessage(String fileName, boolean directory){
         super();
         this.fileName = fileName;
         this.directory = directory;
         setCommandMessageType(Type.NEW_FILE);
-        setActorId(actorId);
-        setSessionId(sessionId);
     }
 
     public String getFileName() {

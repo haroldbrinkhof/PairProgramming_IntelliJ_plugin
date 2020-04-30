@@ -17,10 +17,8 @@ public class FileChangeListener implements BulkFileListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private final ProjectLocator projectLocator = ProjectLocator.getInstance();
     private final ContentChangeService contentChangeService;
-    private final Project project;
 
     public FileChangeListener(Project project){
-        this.project = project;
         contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
 
     }
@@ -59,8 +57,7 @@ public class FileChangeListener implements BulkFileListener {
     private void handleFileEvent(VFileDeleteEvent event){
         System.out.println("DELETE: " + event.getFile().getPath());
         String fileName = event.getFile().getPath();
-        DeleteFileMessage dfMsg = new DeleteFileMessage(contentChangeService.getProjectIndependentPath(fileName),
-                communicationService.getIdentity(),communicationService.getSessionId());
+        DeleteFileMessage dfMsg = new DeleteFileMessage(contentChangeService.getProjectIndependentPath(fileName));
         communicationService.sendMessage(dfMsg);
         communicationService.showNotification("DELETE " + event.getFile().getName());
     }
@@ -69,8 +66,7 @@ public class FileChangeListener implements BulkFileListener {
         String oldPath = event.getOldPath();
         String newPath = event.getNewPath();
         MoveFileMessage mvMsg = new MoveFileMessage(contentChangeService.getProjectIndependentPath(oldPath),
-                contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory(),
-                communicationService.getIdentity(),communicationService.getSessionId());
+                contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory());
 
         communicationService.sendMessage(mvMsg);
         communicationService.showNotification("MOVE " + event.getOldPath() + " to " + event.getNewPath());
@@ -80,8 +76,7 @@ public class FileChangeListener implements BulkFileListener {
         String newPath = event.getNewParent().getPath() + "/" + event.getNewChildName();
         System.out.println("COPY " + oldPath + " => " + newPath);
         CopyFileMessage cpMsg = new CopyFileMessage(contentChangeService.getProjectIndependentPath(oldPath),
-                contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory(),
-                communicationService.getIdentity(),communicationService.getSessionId());
+                contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory());
         communicationService.sendMessage(cpMsg);
         communicationService.showNotification("COPY" + event.getNewParent() + " " + event.getNewChildName());
     }
@@ -91,8 +86,7 @@ public class FileChangeListener implements BulkFileListener {
         String oldPath = event.getOldPath();
         if(!oldPath.equals(newPath)){
             RenameFileMessage rnMsg = new RenameFileMessage(contentChangeService.getProjectIndependentPath(oldPath),
-                    contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory(),
-                    communicationService.getIdentity(),communicationService.getSessionId());
+                    contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory());
             communicationService.sendMessage(rnMsg);
             System.out.println("CHANGE NAME: " + oldPath + " => " + newPath);
             communicationService.showNotification("PROPERTY CHANGE " + property + "\n" + newPath + " from " + oldPath);
@@ -102,7 +96,7 @@ public class FileChangeListener implements BulkFileListener {
         VirtualFile file = event.getFile();
         String fileName = event.getFile().getPath();
         CreateFileMessage cfMsg = new CreateFileMessage(contentChangeService.getProjectIndependentPath(fileName),
-                file.isDirectory(), communicationService.getIdentity(),communicationService.getSessionId());
+                file.isDirectory());
 
         communicationService.sendMessage(cfMsg);
         System.out.println("CREATE: " + fileName);

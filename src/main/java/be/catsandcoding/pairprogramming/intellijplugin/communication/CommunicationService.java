@@ -88,6 +88,8 @@ final public class CommunicationService {
 
     public void sendMessage(CommandMessage msg){
         try {
+            msg.setActorId(getIdentity());
+            msg.setSessionId(getSessionId());
             System.out.println("SENDING MSG: " + new ObjectMapper().writeValueAsString(msg));
             sendMessage(new ObjectMapper().writeValueAsString(msg));
         } catch (JsonProcessingException e) {

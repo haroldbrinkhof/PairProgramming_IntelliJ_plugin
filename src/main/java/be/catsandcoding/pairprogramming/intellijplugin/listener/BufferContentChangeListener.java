@@ -73,7 +73,6 @@ public class BufferContentChangeListener implements DocumentListener {
             ContentChangeMessage cc = new ContentChangeMessage(action,
                     start, end,
                     oldFragment, newFragment,
-                    communicationService.getIdentity(), communicationService.getSessionId(),
                     contentChangeService.getProjectRoot(),
                     fileName.replace(contentChangeService.getProjectRoot(),""),
                     patch,

@@ -6,14 +6,12 @@ public class CopyFileMessage extends CommandMessage {
     private boolean directory;
 
     public CopyFileMessage(){super();} // (de)serialisation necessity
-    public CopyFileMessage(String from, String to, boolean isDirectory, String actorId, String sessionId){
+    public CopyFileMessage(String from, String to, boolean isDirectory){
         super();
         this.from = from;
         this.to = to;
         directory = isDirectory;
         setCommandMessageType(Type.COPY_FILE);
-        setActorId(actorId);
-        setSessionId(sessionId);
     }
 
     public String getFrom() {
