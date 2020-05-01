@@ -108,6 +108,9 @@ final public class CommunicationListener {
                     MoveFileMessage mvMsg = mapper.readValue(command, MoveFileMessage.class);
                     contentChangeService.handle(mvMsg);
                     break;
+                case WHOLE_FILE_CONTENT_CHANGE:
+                    CompleteFileContentChangeMessage ccMsg = mapper.readValue(command, CompleteFileContentChangeMessage.class);
+                    contentChangeService.handle(ccMsg);
             }
 
         }

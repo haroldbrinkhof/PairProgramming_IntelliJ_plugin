@@ -18,6 +18,8 @@
         <projectService
                 serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ChangedContentCacheService"
                 serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ChangedContentCacheServiceImpl"/>
+        <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache"
+                        serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ActionsPerformedCacheImpl"/>
     </extensions>
 
     <actions>

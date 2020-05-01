@@ -1,6 +1,7 @@
 package be.catsandcoding.pairprogramming.intellijplugin.listener;
 
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
+import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.CompleteFileContentChangeMessage;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.ContentChangeMessage;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ChangedContentCacheService;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
@@ -42,6 +43,17 @@ public class BufferContentChangeListener implements DocumentListener {
     public void documentChanged(@NotNull DocumentEvent event) {
 
         if(event.isWholeTextReplaced()){
+            Document document = event.getDocument();
+            String hash = DigestUtils.md5Hex(document.getText()).toUpperCase();
+
+            String fileName = getFileName(document);
+            CompleteFileContentChangeMessage completeChange = new CompleteFileContentChangeMessage(
+                    document.getText(),contentChangeService.getProjectIndependentPath(fileName),
+                    contentChangeService.getProjectRoot(),"", event.getOldTimeStamp(),
+                    document.getModificationStamp(),hash);
+
+            communicationService.sendMessage(completeChange);
+
             System.out.println("whole text has been replaced" + event.getNewFragment());
         } else {
             Document document = event.getDocument();
@@ -76,7 +88,7 @@ public class BufferContentChangeListener implements DocumentListener {
                     start, end,
                     oldFragment, newFragment,
                     contentChangeService.getProjectRoot(),
-                    fileName.replace(contentChangeService.getProjectRoot(),""),
+                    contentChangeService.getProjectIndependentPath(fileName),
                     patch,
                     previousModificationStamp, modificationStamp,
                     hash);

@@ -1,6 +1,8 @@
 package be.catsandcoding.pairprogramming.intellijplugin.editing.impl;
 
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
+import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionPerformed;
+import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -24,11 +26,13 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     private final Project project;
     private final VirtualFileManager virtualFileManager;
     private final FileDocumentManager fileDocumentManager;
+    private final ActionsPerformedCache actionsPerformedCache;
 
     public ContentChangeServiceImpl(Project project) {
         this.project = project;
         this.virtualFileManager = VirtualFileManager.getInstance();
         this.fileDocumentManager = FileDocumentManager.getInstance();
+        this.actionsPerformedCache = ActionsPerformedCache.getInstance(project);
     }
 
     @Override
@@ -165,7 +169,26 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     }
 
     @Override
+    public void handle(final CompleteFileContentChangeMessage msg){
+        String filename = transformToProjectPath(msg.getFileName());
+        System.out.println("perfomChange: determine VirtualFile " + filename);
+        final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
+        if(toChange == null) return;
+
+        final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
+        if(contents == null) return;
+        if(isChangeUnnecessary(contents, msg.getHash())) return;
+
+        System.out.println("NEW TEXT: " + msg.getContent());
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            contents.setText(msg.getContent());
+            fileDocumentManager.saveDocument(contents);
+        } );
+    }
+
+    @Override
     public void handle(final ContentChangeMessage msg){
+        if(actionsPerformedCache.alreadyPerformedPrior(new ActionPerformed(msg.getCommandMessageType(), msg.getFileName()))) return;
         String filename = transformToProjectPath(msg.getFileName());
         System.out.println("perfomChange: determine VirtualFile " + filename);
         final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
@@ -184,6 +207,7 @@ public class ContentChangeServiceImpl implements ContentChangeService {
                 contents.setText(result);
                 fileDocumentManager.saveDocument(contents);
             } );
+        actionsPerformedCache.registerAction(new ActionPerformed(msg.getCommandMessageType(),msg.getFileName()));
     }
 
     private String applyPatchToContents(ContentChangeMessage msg, Document contents) {

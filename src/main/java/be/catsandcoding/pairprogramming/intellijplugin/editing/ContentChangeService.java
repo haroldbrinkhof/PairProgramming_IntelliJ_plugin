@@ -18,4 +18,5 @@ public interface ContentChangeService {
     void handle(RenameFileMessage msg);
     void handle(CopyFileMessage msg);
     void handle(MoveFileMessage msg);
+    void handle(CompleteFileContentChangeMessage msg);
 }
