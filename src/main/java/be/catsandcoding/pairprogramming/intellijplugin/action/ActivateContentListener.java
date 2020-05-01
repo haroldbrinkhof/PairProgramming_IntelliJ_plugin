@@ -1,5 +1,6 @@
 package be.catsandcoding.pairprogramming.intellijplugin.action;
 
+import be.catsandcoding.pairprogramming.intellijplugin.PairProgramming;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationListener;
 import be.catsandcoding.pairprogramming.intellijplugin.listener.BufferContentChangeListener;
@@ -35,10 +36,9 @@ public class ActivateContentListener extends AnAction {
         if(context != null) {
             Project project = context.getData(CommonDataKeys.PROJECT);
             try {
-                EditorFactory.getInstance().getEventMulticaster()
-                        .addDocumentListener(new BufferContentChangeListener(project), project);
-                ApplicationManager.getApplication().getMessageBus().connect(project)
-                        .subscribe(VFS_CHANGES, new FileChangeListener(project));
+                PairProgramming pairProgramming = PairProgramming.getInstance(project);
+                pairProgramming.installContentChangeListener();
+                pairProgramming.installFileChangeListener();
                 PairingDialogNotConnected pd = new PairingDialogNotConnected();
                 pd.shouldCloseOnCross();
                 if(pd.showAndGet()){

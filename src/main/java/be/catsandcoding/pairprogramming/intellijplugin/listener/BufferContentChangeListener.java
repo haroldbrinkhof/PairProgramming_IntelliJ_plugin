@@ -1,5 +1,6 @@
 package be.catsandcoding.pairprogramming.intellijplugin.listener;
 
+import be.catsandcoding.pairprogramming.intellijplugin.PairProgramming;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.CompleteFileContentChangeMessage;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.ContentChangeMessage;
@@ -25,8 +26,10 @@ public class BufferContentChangeListener implements DocumentListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private final ContentChangeService contentChangeService;
     private final ChangedContentCacheService changedContentCacheService;
+    private final Project project;
 
     public BufferContentChangeListener(Project project) {
+        this.project = project;
         contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
         changedContentCacheService = ServiceManager.getService(project, ChangedContentCacheService.class);
 
@@ -41,21 +44,25 @@ public class BufferContentChangeListener implements DocumentListener {
 
     @Override
     public void documentChanged(@NotNull DocumentEvent event) {
-
+        if(PairProgramming.getInstance(project).isInWriteAction()) return;
         if(event.isWholeTextReplaced()){
             Document document = event.getDocument();
             String hash = DigestUtils.md5Hex(document.getText()).toUpperCase();
 
             String fileName = getFileName(document);
             CompleteFileContentChangeMessage completeChange = new CompleteFileContentChangeMessage(
-                    document.getText(),contentChangeService.getProjectIndependentPath(fileName),
-                    contentChangeService.getProjectRoot(),"", event.getOldTimeStamp(),
+                    document.getText(),
+                    contentChangeService.getProjectRoot(),
+                    contentChangeService.getProjectIndependentPath(fileName),
+                    "", event.getOldTimeStamp(),
                     document.getModificationStamp(),hash);
 
             communicationService.sendMessage(completeChange);
 
             System.out.println("whole text has been replaced" + event.getNewFragment());
-        } else {
+        }
+
+        else {
             Document document = event.getDocument();
             final long modificationStamp = document.getModificationStamp();
             final long previousModificationStamp = event.getOldTimeStamp();
@@ -121,7 +128,7 @@ public class BufferContentChangeListener implements DocumentListener {
 
             diff_match_patch dmp = new diff_match_patch();
             LinkedList<diff_match_patch.Diff> diff = dmp.diff_main( contentBeforeChangeOpt.get().getContent(),
-                                                event.getDocument().getText(), true);
+                                                event.getDocument().getText(), false);
             dmp.diff_cleanupEfficiency(diff);
             LinkedList<diff_match_patch.Patch> patches = dmp.patch_make(diff);
             patch = dmp.patch_toText(patches);

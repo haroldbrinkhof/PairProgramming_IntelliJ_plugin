@@ -58,13 +58,9 @@ final public class CommunicationListener {
         private void listenForCommandsAndActOnThem() {
             do {
                 try {
-                    System.out.println("waiting for a message from the server");
                     String command = zmqConnection.recvStr();
-                    System.out.println("got a message from the server");
 
                     if (!command.isEmpty() && !command.equals(communicationService.getSessionId())) {
-                        System.out.println(command);
-                        System.out.println("PROJECT: " + contentChangeService.getProjectRoot());
                         handleCommand(command);
                     }
                     Thread.sleep(10);
@@ -82,6 +78,7 @@ final public class CommunicationListener {
             CommandMessage commandMessage = permissiveMapper.readValue(command, CommandMessage.class);
             if(weIssuedThis(commandMessage)) return;
             System.out.println(String.format("We[%s] didn't issue this: %s",communicationService.getIdentity(),commandMessage.getActorId()));
+            System.out.println(commandMessage.getCommandMessageType() + " by " + commandMessage.getActorId());
 
             switch(commandMessage.getCommandMessageType()){
                 case CONTENT_CHANGE:

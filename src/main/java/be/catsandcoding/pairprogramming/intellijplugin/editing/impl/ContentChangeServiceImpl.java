@@ -1,5 +1,6 @@
 package be.catsandcoding.pairprogramming.intellijplugin.editing.impl;
 
+import be.catsandcoding.pairprogramming.intellijplugin.PairProgramming;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionPerformed;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache;
@@ -27,9 +28,11 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     private final VirtualFileManager virtualFileManager;
     private final FileDocumentManager fileDocumentManager;
     private final ActionsPerformedCache actionsPerformedCache;
+    private final PairProgramming pairProgramming;
 
     public ContentChangeServiceImpl(Project project) {
         this.project = project;
+        this.pairProgramming = PairProgramming.getInstance(project);
         this.virtualFileManager = VirtualFileManager.getInstance();
         this.fileDocumentManager = FileDocumentManager.getInstance();
         this.actionsPerformedCache = ActionsPerformedCache.getInstance(project);
@@ -57,7 +60,6 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
         final VirtualFile toLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + to.substring(0, to.lastIndexOf("/") + 1));
 
-        System.out.println("HANDLE MOVE: " + from + " => " + to);
         if(fromLocal != null && toLocal != null &&
                 ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal) &&
                 ProjectFileIndex.SERVICE.getInstance(project).isInContent(toLocal)) {
@@ -77,7 +79,6 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         final String from = transformToProjectPath(msg.getFrom());
         final String to = transformToProjectPath(msg.getTo());
 
-        System.out.println("HANDLE COPY: " + from + " => " + to);
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
         final VirtualFile toLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + to.substring(0, to.lastIndexOf("/") + 1));
         if(fromLocal != null && toLocal != null &&
@@ -100,7 +101,6 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         final String from = transformToProjectPath(msg.getFrom());
         final String to = transformToProjectPath(msg.getTo());
 
-        System.out.println("HANDLE CHANGE NAME: " + from + " => " + to);
         final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
         if(fromLocal != null && ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal)){
             WriteCommandAction.runWriteCommandAction(project,
@@ -133,7 +133,6 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     @Override
     public void handle(final CreateFileMessage msg){
         String filename = transformToProjectPath(msg.getFileName());
-        System.out.println("CREATING FOR: " + filename);
         final VirtualFile file = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
         if(file != null) return;
 
@@ -165,48 +164,52 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         return OS.isWindows()?fileToCreate.replace("/","\\"):fileToCreate;
     }
     private boolean isChangeUnnecessary(Document document, String hash){
+        System.out.println("CHANGE IS UNNECESSARY");
         return DigestUtils.md5Hex(document.getText()).toUpperCase().equals(hash);
     }
 
     @Override
     public void handle(final CompleteFileContentChangeMessage msg){
+        if(pairProgramming.isInWriteAction()) return;
+        System.out.println(msg);
         String filename = transformToProjectPath(msg.getFileName());
-        System.out.println("perfomChange: determine VirtualFile " + filename);
         final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
-        if(toChange == null) return;
+        if(toChange == null) { System.out.println("couldn't find file " + filename); return;}
 
         final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
-        if(contents == null) return;
+        if(contents == null) { System.out.println("couldn't get document content"); return; }
         if(isChangeUnnecessary(contents, msg.getHash())) return;
 
         System.out.println("NEW TEXT: " + msg.getContent());
+        pairProgramming.markAsInWriteAction();
         WriteCommandAction.runWriteCommandAction(project, () -> {
             contents.setText(msg.getContent());
             fileDocumentManager.saveDocument(contents);
         } );
+        pairProgramming.markAsOutOfWriteAction();
     }
 
     @Override
     public void handle(final ContentChangeMessage msg){
+        if(pairProgramming.isInWriteAction()) return;
         if(actionsPerformedCache.alreadyPerformedPrior(new ActionPerformed(msg.getCommandMessageType(), msg.getFileName()))) return;
         String filename = transformToProjectPath(msg.getFileName());
-        System.out.println("perfomChange: determine VirtualFile " + filename);
         final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
         if(toChange == null) return;
 
-        System.out.println("perfomChange: determine Document");
         final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
         if(contents == null) return;
         if(isChangeUnnecessary(contents, msg.getHash())) return;
 
-        System.out.println("changing contents of file: " + toChange.getPath());
         final String result = applyPatchToContents(msg, contents);
 
-        System.out.println("NEW TEXT: " + result);
+        System.out.println("NEW TEXT AFTER PARTIAL: " + result);
+        pairProgramming.markAsInWriteAction();
         WriteCommandAction.runWriteCommandAction(project, () -> {
                 contents.setText(result);
                 fileDocumentManager.saveDocument(contents);
             } );
+        pairProgramming.markAsOutOfWriteAction();
         actionsPerformedCache.registerAction(new ActionPerformed(msg.getCommandMessageType(),msg.getFileName()));
     }
 

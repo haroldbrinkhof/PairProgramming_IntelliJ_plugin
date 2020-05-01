@@ -20,6 +20,8 @@
                 serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ChangedContentCacheServiceImpl"/>
         <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache"
                         serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ActionsPerformedCacheImpl"/>
+        <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.PairProgramming"
+                        serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.impl.PairProgrammingImpl"/>
     </extensions>
 
     <actions>
@@ -31,6 +33,7 @@
         </action>
     </actions>
     <projectListeners>
+        <listener class="be.catsandcoding.pairprogramming.intellijplugin.listener.BufferContentChangeListener" topic="com.intellij.openapi.editor.event.DocumentListener" />
         <listener class="be.catsandcoding.pairprogramming.intellijplugin.listener.FileChangeListener" topic="com.intellij.openapi.vfs.newvfs.BulkFileListener" />
     </projectListeners>
     <idea-version since-build="2019.1"/>

@@ -21,6 +21,8 @@ public class CompleteFileContentChangeMessage extends CommandMessage {
         this.oldTimeStamp = oldTimeStamp;
         this.currentTimeStamp = currentTimeStamp;
         this.hash = hash;
+        setCommandMessageType(Type.WHOLE_FILE_CONTENT_CHANGE);
+
     }
 
     public String getProjectBasePath() {
@@ -49,5 +51,18 @@ public class CompleteFileContentChangeMessage extends CommandMessage {
 
     public String getHash() {
         return hash;
+    }
+
+    @Override
+    public String toString() {
+        return "CompleteFileContentChangeMessage{" +
+                "content='" + content + '\'' +
+                ", projectBasePath='" + projectBasePath + '\'' +
+                ", fileName='" + fileName + '\'' +
+                ", patch='" + patch + '\'' +
+                ", oldTimeStamp=" + oldTimeStamp +
+                ", currentTimeStamp=" + currentTimeStamp +
+                ", hash='" + hash + '\'' +
+                '}';
     }
 }
