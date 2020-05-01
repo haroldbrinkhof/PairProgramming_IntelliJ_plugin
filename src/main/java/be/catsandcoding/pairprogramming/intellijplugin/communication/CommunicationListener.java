@@ -81,6 +81,7 @@ final public class CommunicationListener {
 
             CommandMessage commandMessage = permissiveMapper.readValue(command, CommandMessage.class);
             if(weIssuedThis(commandMessage)) return;
+            System.out.println(String.format("We[%s] didn't issue this: %s",communicationService.getIdentity(),commandMessage.getActorId()));
 
             switch(commandMessage.getCommandMessageType()){
                 case CONTENT_CHANGE:

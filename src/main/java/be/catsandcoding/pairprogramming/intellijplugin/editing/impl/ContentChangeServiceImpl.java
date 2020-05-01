@@ -13,6 +13,7 @@ import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import name.fraser.neil.plaintext.diff_match_patch;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.jdesktop.swingx.util.OS;
 
 import java.io.IOException;
@@ -159,6 +160,9 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     private String safeguardForWindowsIfNecessary(String fileToCreate) {
         return OS.isWindows()?fileToCreate.replace("/","\\"):fileToCreate;
     }
+    private boolean isChangeUnnecessary(Document document, String hash){
+        return DigestUtils.md5Hex(document.getText()).toUpperCase().equals(hash);
+    }
 
     @Override
     public void handle(final ContentChangeMessage msg){
@@ -170,6 +174,7 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         System.out.println("perfomChange: determine Document");
         final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
         if(contents == null) return;
+        if(isChangeUnnecessary(contents, msg.getHash())) return;
 
         System.out.println("changing contents of file: " + toChange.getPath());
         final String result = applyPatchToContents(msg, contents);

@@ -13,6 +13,7 @@ import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
@@ -69,6 +70,7 @@ public class BufferContentChangeListener implements DocumentListener {
             ContentChangeMessage.Action action = determineAction(oldFragment.isEmpty(), newFragment.isEmpty());
             ContentPosition start = new ContentPosition(firstLine, firstColumn);
             ContentPosition end = new ContentPosition(lastLine, lastColumn);
+            String hash = DigestUtils.md5Hex(document.getText()).toUpperCase();
 
             ContentChangeMessage cc = new ContentChangeMessage(action,
                     start, end,
@@ -76,7 +78,8 @@ public class BufferContentChangeListener implements DocumentListener {
                     contentChangeService.getProjectRoot(),
                     fileName.replace(contentChangeService.getProjectRoot(),""),
                     patch,
-                    previousModificationStamp, modificationStamp);
+                    previousModificationStamp, modificationStamp,
+                    hash);
             communicationService.sendMessage(cc);
         }
 
