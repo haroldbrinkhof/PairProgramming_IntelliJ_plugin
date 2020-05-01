@@ -3,6 +3,7 @@ package be.catsandcoding.pairprogramming.intellijplugin.editing;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 
 public interface ContentChangeService {
@@ -17,6 +18,10 @@ public interface ContentChangeService {
     void handle(CreateFileMessage msg);
     void handle(RenameFileMessage msg);
     void handle(CopyFileMessage msg);
+    void handle(CopyOutsideFileMessage msg);
     void handle(MoveFileMessage msg);
     void handle(CompleteFileContentChangeMessage msg);
+    String transformToProjectPath(String path);
+    boolean isPartOfThisProject(VirtualFile fromLocal);
+    boolean isPartOfThisProject(String path);
 }

@@ -2,8 +2,6 @@ package be.catsandcoding.pairprogramming.intellijplugin.editing.impl;
 
 import be.catsandcoding.pairprogramming.intellijplugin.PairProgramming;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
-import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionPerformed;
-import be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -18,16 +16,17 @@ import com.intellij.openapi.vfs.VirtualFileManager;
 import name.fraser.neil.plaintext.diff_match_patch;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.jdesktop.swingx.util.OS;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.LinkedList;
+import java.util.Optional;
 
 public class ContentChangeServiceImpl implements ContentChangeService {
     private final Project project;
     private final VirtualFileManager virtualFileManager;
     private final FileDocumentManager fileDocumentManager;
-    private final ActionsPerformedCache actionsPerformedCache;
     private final PairProgramming pairProgramming;
 
     public ContentChangeServiceImpl(Project project) {
@@ -35,7 +34,6 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         this.pairProgramming = PairProgramming.getInstance(project);
         this.virtualFileManager = VirtualFileManager.getInstance();
         this.fileDocumentManager = FileDocumentManager.getInstance();
-        this.actionsPerformedCache = ActionsPerformedCache.getInstance(project);
     }
 
     @Override
@@ -49,20 +47,37 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         return path.replace(getProjectRoot(), "");
     }
 
+    @Override
     public String transformToProjectPath(String path) {
         return getProjectRoot() + path;
     }
 
     @Override
+    public boolean isPartOfThisProject(VirtualFile fromLocal) {
+        return ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal);
+    }
+
+    @Override
+    public boolean isPartOfThisProject(String path) {
+        VirtualFile virtualFile = getVirtualFileFromPath(path);
+        return isPartOfThisProject(virtualFile);
+    }
+
+    private VirtualFile getVirtualFileFromPath(String path) {
+        return virtualFileManager.refreshAndFindFileByUrl("file://" + path);
+    }
+
+
+    @Override
     public void handle(final MoveFileMessage msg){
         final String from = transformToProjectPath(msg.getFrom());
         final String to = transformToProjectPath(msg.getTo());
-        final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
-        final VirtualFile toLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + to.substring(0, to.lastIndexOf("/") + 1));
+        final VirtualFile fromLocal = getVirtualFileFromPath(from);
+        final VirtualFile toLocal = getVirtualFileFromPath(pathWithoutFilename(to));
 
         if(fromLocal != null && toLocal != null &&
-                ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal) &&
-                ProjectFileIndex.SERVICE.getInstance(project).isInContent(toLocal)) {
+                isPartOfThisProject(fromLocal) &&
+                isPartOfThisProject(toLocal)) {
             WriteCommandAction.runWriteCommandAction(project,
                     () -> {
                         try {
@@ -74,16 +89,29 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         }
     }
 
+    @NotNull
+    private String pathWithoutFilename(String to) {
+        return to.substring(0, to.lastIndexOf("/") + 1);
+    }
+
+    @Override
+    public void handle(final CopyOutsideFileMessage msg){
+        String to = transformToProjectPath(msg.getTo());
+        tryToCreate(to, msg.isDirectory());
+        Optional<Document> documentOpt = getDocumentForContentChange(to, null);
+        documentOpt.ifPresent(contents -> writeDocumentContent(contents, msg.getContent()));
+    }
+
     @Override
     public void handle(final CopyFileMessage msg){
         final String from = transformToProjectPath(msg.getFrom());
         final String to = transformToProjectPath(msg.getTo());
 
-        final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
-        final VirtualFile toLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + to.substring(0, to.lastIndexOf("/") + 1));
+        final VirtualFile fromLocal = getVirtualFileFromPath(from);
+        final VirtualFile toLocal = getVirtualFileFromPath(pathWithoutFilename(to));
         if(fromLocal != null && toLocal != null &&
-                ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal) &&
-                ProjectFileIndex.SERVICE.getInstance(project).isInContent(toLocal)){
+                isPartOfThisProject(fromLocal) &&
+                isPartOfThisProject(toLocal)){
             WriteCommandAction.runWriteCommandAction(project,
                     ()  -> {
                         try {
@@ -101,8 +129,8 @@ public class ContentChangeServiceImpl implements ContentChangeService {
         final String from = transformToProjectPath(msg.getFrom());
         final String to = transformToProjectPath(msg.getTo());
 
-        final VirtualFile fromLocal = virtualFileManager.refreshAndFindFileByUrl("file://" + from);
-        if(fromLocal != null && ProjectFileIndex.SERVICE.getInstance(project).isInContent(fromLocal)){
+        final VirtualFile fromLocal = getVirtualFileFromPath(from);
+        if(fromLocal != null && isPartOfThisProject(fromLocal)){
             WriteCommandAction.runWriteCommandAction(project,
                     ()  -> {
                         try {
@@ -118,8 +146,8 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     @Override
     public void handle(final DeleteFileMessage msg){
         String filename = transformToProjectPath(msg.getFileName());
-        final VirtualFile file = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
-        if(file == null || !ProjectFileIndex.SERVICE.getInstance(project).isInContent(file)) return ;
+        final VirtualFile file = getVirtualFileFromPath(filename);
+        if(file == null || !isPartOfThisProject(file)) return ;
         WriteCommandAction.runWriteCommandAction(project,
                 ()  -> {
                     try {
@@ -133,21 +161,21 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     @Override
     public void handle(final CreateFileMessage msg){
         String filename = transformToProjectPath(msg.getFileName());
-        final VirtualFile file = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
+        final VirtualFile file = getVirtualFileFromPath(filename);
         if(file != null) return;
 
         final String fileToCreate = filename;
-        WriteCommandAction.runWriteCommandAction(project, ()  -> tryToCreate(msg, fileToCreate) );
+        WriteCommandAction.runWriteCommandAction(project, ()  -> tryToCreate(fileToCreate, msg.isDirectory()) );
 
-        virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
+        getVirtualFileFromPath(filename);
 
     }
 
-    private void tryToCreate(CreateFileMessage msg, String fileToCreate) {
+    private void tryToCreate(String fileToCreate, boolean isDirectory) {
         try {
 
             Path path = Paths.get(safeguardForWindowsIfNecessary(fileToCreate));
-            if(msg.isDirectory()){
+            if(isDirectory){
                 Files.createDirectory(path);
             } else {
                 Files.createFile(path);
@@ -163,56 +191,57 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     private String safeguardForWindowsIfNecessary(String fileToCreate) {
         return OS.isWindows()?fileToCreate.replace("/","\\"):fileToCreate;
     }
-    private boolean isChangeUnnecessary(Document document, String hash){
-        System.out.println("CHANGE IS UNNECESSARY");
-        return DigestUtils.md5Hex(document.getText()).toUpperCase().equals(hash);
-    }
 
     @Override
     public void handle(final CompleteFileContentChangeMessage msg){
-        if(pairProgramming.isInWriteAction()) return;
-        System.out.println(msg);
-        String filename = transformToProjectPath(msg.getFileName());
-        final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
-        if(toChange == null) { System.out.println("couldn't find file " + filename); return;}
-
-        final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
-        if(contents == null) { System.out.println("couldn't get document content"); return; }
-        if(isChangeUnnecessary(contents, msg.getHash())) return;
-
-        System.out.println("NEW TEXT: " + msg.getContent());
-        pairProgramming.markAsInWriteAction();
-        WriteCommandAction.runWriteCommandAction(project, () -> {
-            contents.setText(msg.getContent());
-            fileDocumentManager.saveDocument(contents);
-        } );
-        pairProgramming.markAsOutOfWriteAction();
+        final Optional<Document> contentsOpt = getDocumentForContentChange(msg.getFileName(), msg.getHash());
+        contentsOpt.ifPresent( contents -> writeDocumentContent(contents, msg.getContent()));
     }
 
     @Override
     public void handle(final ContentChangeMessage msg){
-        if(pairProgramming.isInWriteAction()) return;
-        if(actionsPerformedCache.alreadyPerformedPrior(new ActionPerformed(msg.getCommandMessageType(), msg.getFileName()))) return;
-        String filename = transformToProjectPath(msg.getFileName());
-        final VirtualFile toChange = virtualFileManager.refreshAndFindFileByUrl("file://" + filename);
-        if(toChange == null) return;
-
-        final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
-        if(contents == null) return;
-        if(isChangeUnnecessary(contents, msg.getHash())) return;
-
-        final String result = applyPatchToContents(msg, contents);
-
-        System.out.println("NEW TEXT AFTER PARTIAL: " + result);
-        pairProgramming.markAsInWriteAction();
-        WriteCommandAction.runWriteCommandAction(project, () -> {
-                contents.setText(result);
-                fileDocumentManager.saveDocument(contents);
-            } );
-        pairProgramming.markAsOutOfWriteAction();
-        actionsPerformedCache.registerAction(new ActionPerformed(msg.getCommandMessageType(),msg.getFileName()));
+        final Optional<Document> contentsOpt = getDocumentForContentChange(msg.getFileName(), msg.getHash());
+        contentsOpt.ifPresent(contents -> {
+            String result = applyPatchToContents(msg, contents);
+            writeDocumentContent(contents, result);
+        });
     }
 
+    private void writeDocumentContent(Document contents, String result) {
+        pairProgramming.markAsInWriteAction();
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            contents.setText(result);
+            fileDocumentManager.saveDocument(contents);
+        });
+        pairProgramming.markAsOutOfWriteAction();
+    }
+
+    @NotNull
+    private Optional<Document> getDocumentForContentChange(String filenameToChange, String hash) {
+        if(pairProgramming.isInWriteAction()) {
+            return Optional.empty();
+        }
+        String filename = transformToProjectPath(filenameToChange);
+        final VirtualFile toChange = getVirtualFileFromPath(filename);
+        if(toChange == null) {
+            return Optional.empty();
+        }
+
+        final Document contents = ReadAction.compute(() -> fileDocumentManager.getDocument(toChange));
+        if(contents == null) {
+            return Optional.empty();
+        }
+        if(isChangeUnnecessary(contents, hash)) {
+            return Optional.empty();
+        }
+        return Optional.of(contents);
+    }
+
+    private boolean isChangeUnnecessary(Document document, String hash){
+        return DigestUtils.md5Hex(document.getText()).toUpperCase().equals(hash);
+    }
+
+    @NotNull
     private String applyPatchToContents(ContentChangeMessage msg, Document contents) {
         diff_match_patch dmp = new diff_match_patch();
         LinkedList<diff_match_patch.Patch> patch = (LinkedList<diff_match_patch.Patch>) dmp.patch_fromText(msg.getPatch());

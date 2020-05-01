@@ -101,6 +101,10 @@ final public class CommunicationListener {
                     CopyFileMessage cpMsg = mapper.readValue(command, CopyFileMessage.class);
                     contentChangeService.handle(cpMsg);
                     break;
+                case COPY_OUTSIDE_FILE:
+                    CopyOutsideFileMessage cpoMsg = mapper.readValue(command, CopyOutsideFileMessage.class);
+                    contentChangeService.handle(cpoMsg);
+                    break;
                 case MOVE_FILE:
                     MoveFileMessage mvMsg = mapper.readValue(command, MoveFileMessage.class);
                     contentChangeService.handle(mvMsg);

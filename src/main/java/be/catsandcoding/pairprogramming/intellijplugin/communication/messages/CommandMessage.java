@@ -6,7 +6,8 @@ public class CommandMessage {
                         NEW_FILE,
                         MOVE_FILE,
                         RENAME_FILE,
-                        COPY_FILE }
+                        COPY_FILE, COPY_OUTSIDE_FILE
+    }
 
     private Type commandMessageType;
     private String actorId;

@@ -5,11 +5,13 @@ import be.catsandcoding.pairprogramming.intellijplugin.communication.messages.*;
 import be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 
 public class FileChangeListener implements BulkFileListener {
@@ -71,9 +73,20 @@ public class FileChangeListener implements BulkFileListener {
         String oldPath = event.getFile().getPath();
         String newPath = event.getNewParent().getPath() + "/" + event.getNewChildName();
         System.out.println("COPY " + oldPath + " => " + newPath);
-        CopyFileMessage cpMsg = new CopyFileMessage(contentChangeService.getProjectIndependentPath(oldPath),
-                contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory());
-        communicationService.sendMessage(cpMsg);
+
+        if(contentChangeService.isPartOfThisProject(oldPath)) {
+            CopyFileMessage cpMsg = new CopyFileMessage(contentChangeService.getProjectIndependentPath(oldPath),
+                    contentChangeService.getProjectIndependentPath(newPath), event.getFile().isDirectory());
+            communicationService.sendMessage(cpMsg);
+        } else {
+            try {
+                String content = VfsUtil.loadText(event.getFile());
+                CopyOutsideFileMessage cpoMsg = new CopyOutsideFileMessage(newPath, content);
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+
+        }
         communicationService.showNotification("COPY" + event.getNewParent() + " " + event.getNewChildName());
     }
     private void handleFileEvent(VFilePropertyChangeEvent event){
