@@ -81,7 +81,9 @@ public class FileChangeListener implements BulkFileListener {
         } else {
             try {
                 String content = VfsUtil.loadText(event.getFile());
-                CopyOutsideFileMessage cpoMsg = new CopyOutsideFileMessage(newPath, content);
+                CopyOutsideFileMessage cpoMsg;
+                cpoMsg = new CopyOutsideFileMessage(contentChangeService.getProjectIndependentPath(newPath), content);
+                communicationService.sendMessage(cpoMsg);
             } catch(IOException e) {
                 e.printStackTrace();
             }
