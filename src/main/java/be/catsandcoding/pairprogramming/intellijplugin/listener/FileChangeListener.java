@@ -113,6 +113,6 @@ public class FileChangeListener implements BulkFileListener {
 
     }
     private void handleFileEvent(VFileEvent event){
-        communicationService.showNotification( "Unknown event: " + event.getClass());
+        communicationService.showNotification( "Unhandled event: " + event.getClass());
     }
 }

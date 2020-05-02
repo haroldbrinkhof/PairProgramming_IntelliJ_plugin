@@ -21,7 +21,7 @@ public class PairingDialogNotConnected extends DialogWrapper {
     public PairingDialogNotConnected(){
         super(true);
         init();
-        setTitle("Pairing-session properties");
+        setTitle("Pairing-Session Properties");
 
     }
 

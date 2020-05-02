@@ -1,4 +1,4 @@
-package be.catsandcoding.pairprogramming.intellijplugin.action;
+package be.catsandcoding.pairprogramming.intellijplugin.ui.action;
 
 import be.catsandcoding.pairprogramming.intellijplugin.PairProgramming;
 import be.catsandcoding.pairprogramming.intellijplugin.communication.CommunicationService;

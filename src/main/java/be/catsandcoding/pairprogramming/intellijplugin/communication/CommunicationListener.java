@@ -13,19 +13,20 @@ import com.intellij.openapi.project.Project;
 import org.zeromq.*;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 final public class CommunicationListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private ContentChangeService contentChangeService;
-    private boolean stopRunning = false;
+    private final AtomicBoolean stopRunning = new AtomicBoolean();
 
 
     private void reset(){
-        stopRunning = false;
+        stopRunning.set(false);
     }
     public void stop(){
-        stopRunning = true;
+        stopRunning.set(true);
     }
 
     public void start(Project project) {
@@ -67,7 +68,7 @@ final public class CommunicationListener {
                 } catch(InterruptedException | IOException e){
                    e.printStackTrace();
                 }
-            } while(!stopRunning);
+            } while(!stopRunning.get());
         }
 
         private void handleCommand(String command) throws JsonProcessingException {

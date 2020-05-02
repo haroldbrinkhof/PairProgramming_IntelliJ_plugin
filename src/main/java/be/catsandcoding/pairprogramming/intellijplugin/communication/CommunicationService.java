@@ -99,7 +99,6 @@ final public class CommunicationService {
     }
 
     public void stopConnection() {
-        zmqConnection.close();
-        context.destroySocket(zmqConnection);
+        stopConnectionInContext(zmqConnection);
     }
 }

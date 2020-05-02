@@ -13,7 +13,6 @@ public class ContentChangeMessage extends CommandMessage {
     private String newContent;
 
     private Action action;
-    private String projectBasePath;
     private String fileName;
     private String patch;
     private long oldTimeStamp;
@@ -23,7 +22,7 @@ public class ContentChangeMessage extends CommandMessage {
     protected ContentChangeMessage(){super();} // (de)serialisation necessity
 
     public ContentChangeMessage(Action action, ContentPosition startPosition, ContentPosition endPosition,
-                                String oldContent, String newContent, String projectBasePath,
+                                String oldContent, String newContent,
                                 String fileName, String patch, long oldTimeStamp, long currentTimeStamp,
                                 String hash){
         super();
@@ -32,7 +31,6 @@ public class ContentChangeMessage extends CommandMessage {
         this.endPosition = endPosition;
         this.oldContent = oldContent;
         this.newContent = newContent;
-        this.projectBasePath = projectBasePath;
         this.fileName = fileName;
         this.patch = patch;
         this.oldTimeStamp = oldTimeStamp;
@@ -64,10 +62,6 @@ public class ContentChangeMessage extends CommandMessage {
     }
     public String getNewContent(){
         return newContent;
-    }
-
-    public String getProjectBasePath() {
-        return projectBasePath;
     }
 
     public String getFileName() {

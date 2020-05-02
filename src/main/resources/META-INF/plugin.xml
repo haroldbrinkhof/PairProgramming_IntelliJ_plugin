@@ -16,18 +16,16 @@
         <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ContentChangeService"
                         serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ContentChangeServiceImpl"/>
         <projectService
-                serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ChangedContentCacheService"
-                serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ChangedContentCacheServiceImpl"/>
-        <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.ActionsPerformedCache"
-                        serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.ActionsPerformedCacheImpl"/>
+                serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.editing.DocumentContentCacheService"
+                serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.editing.impl.DocumentContentCacheServiceImpl"/>
         <projectService serviceInterface="be.catsandcoding.pairprogramming.intellijplugin.PairProgramming"
                         serviceImplementation="be.catsandcoding.pairprogramming.intellijplugin.impl.PairProgrammingImpl"/>
     </extensions>
 
     <actions>
         <!-- Add your actions here -->
-        <action id="be.catsandcoding.pairprogramming.intellijplugin.action.ActivateContentListener"
-                class="be.catsandcoding.pairprogramming.intellijplugin.action.ActivateContentListener" text="ActivateContentListener"
+        <action id="be.catsandcoding.pairprogramming.intellijplugin.ui.action.ActivateContentListener"
+                class="be.catsandcoding.pairprogramming.intellijplugin.ui.action.ActivateContentListener" text="ActivateContentListener"
                 description="Activates the content change listener for this project">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
         </action>

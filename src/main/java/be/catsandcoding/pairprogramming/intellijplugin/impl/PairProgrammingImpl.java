@@ -14,11 +14,10 @@ import static com.intellij.openapi.vfs.VirtualFileManager.VFS_CHANGES;
 
 public class PairProgrammingImpl implements PairProgramming {
     private BufferContentChangeListener buffer;
-    private FileChangeListener files;
     private MessageBusConnection bus;
     private final Project project;
 
-    private AtomicBoolean inWriteAction = new AtomicBoolean(false);
+    private final AtomicBoolean inWriteAction = new AtomicBoolean(false);
 
     public void markAsInWriteAction(){
         inWriteAction.set(true);
@@ -51,9 +50,8 @@ public class PairProgrammingImpl implements PairProgramming {
 
     @Override
     public void installFileChangeListener(){
-        this.files = new FileChangeListener(project);
         bus = ApplicationManager.getApplication().getMessageBus().connect(project);
-        bus.subscribe(VFS_CHANGES, files);
+        bus.subscribe(VFS_CHANGES, new FileChangeListener(project));
     }
 
     @Override

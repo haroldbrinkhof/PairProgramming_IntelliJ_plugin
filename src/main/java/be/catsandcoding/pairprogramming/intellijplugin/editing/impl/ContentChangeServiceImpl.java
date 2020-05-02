@@ -97,6 +97,7 @@ public class ContentChangeServiceImpl implements ContentChangeService {
     @Override
     public void handle(final CopyOutsideFileMessage msg){
         String to = transformToProjectPath(msg.getTo());
+
         tryToCreate(to, msg.isDirectory());
         Optional<Document> documentOpt = getDocumentForContentChange(to, null);
         documentOpt.ifPresent(contents -> writeDocumentContent(contents, msg.getContent()));

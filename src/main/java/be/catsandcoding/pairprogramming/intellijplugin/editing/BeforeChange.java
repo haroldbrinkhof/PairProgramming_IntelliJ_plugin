@@ -2,12 +2,12 @@ package be.catsandcoding.pairprogramming.intellijplugin.editing;
 
 import java.util.Objects;
 
-public class PriorToChangeContentData {
+public class BeforeChange {
     private final String content;
     private final long modificationTimeStamp;
     private final String filename;
 
-    public PriorToChangeContentData(String content, String filename, long modificationTimeStamp){
+    public BeforeChange(String content, String filename, long modificationTimeStamp){
         this.content = content;
         this.filename = filename;
         this.modificationTimeStamp = modificationTimeStamp;
@@ -21,7 +21,7 @@ public class PriorToChangeContentData {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PriorToChangeContentData that = (PriorToChangeContentData) o;
+        BeforeChange that = (BeforeChange) o;
         return modificationTimeStamp == that.modificationTimeStamp &&
                 filename.equals(that.filename);
     }
