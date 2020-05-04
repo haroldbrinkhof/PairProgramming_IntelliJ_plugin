@@ -21,7 +21,7 @@ public class PairProgrammingImpl implements PairProgramming {
     private BufferContentChangeListener buffer;
     private MessageBusConnection bus;
     private final Project project;
-    private List<String> pathsToDeny = new ArrayList<>(List.of("^.*/resources/.*$"));
+    private List<String> pathsToDeny = new ArrayList<>();
     private long maxFileSizeInKB = 0;
 
     private final AtomicBoolean inWriteAction = new AtomicBoolean(false);

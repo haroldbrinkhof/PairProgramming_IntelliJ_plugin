@@ -86,7 +86,7 @@ public class FileChangeListener implements PairProgrammingBulkFileListener {
     public void handleFileEvent(VFileCreateEvent event){
         VirtualFile file = event.getFile();
         if(file == null) return;
-        
+
         String fileName = file.getPath();
         CreateFileMessage cfMsg = new CreateFileMessage(contentChangeService.getProjectIndependentPath(fileName),
                 file.isDirectory());
