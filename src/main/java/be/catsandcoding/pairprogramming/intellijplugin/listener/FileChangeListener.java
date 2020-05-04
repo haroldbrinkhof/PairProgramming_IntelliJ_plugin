@@ -7,59 +7,29 @@ import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.List;
 
-public class FileChangeListener implements BulkFileListener {
+public class FileChangeListener implements PairProgrammingBulkFileListener {
     private final CommunicationService communicationService = ServiceManager.getService(CommunicationService.class);
     private final ContentChangeService contentChangeService;
 
     public FileChangeListener(Project project){
-        contentChangeService = ServiceManager.getService(project, ContentChangeService.class);
-
-    }
-    @Override
-    public void before(@NotNull List<? extends VFileEvent> events) {
-
+        contentChangeService = ContentChangeService.getInstance(project);
     }
 
     @Override
-    public void after(@NotNull List<? extends VFileEvent> events) {
-        for(VFileEvent event: events){
-            if (event instanceof VFileCreateEvent){
-                handleFileEvent((VFileCreateEvent) event);
-            } else if (event instanceof  VFilePropertyChangeEvent){
-                handleFileEvent((VFilePropertyChangeEvent) event);
-            } else if (event instanceof VFileCopyEvent){
-                handleFileEvent((VFileCopyEvent) event);
-            } else if (event instanceof  VFileDeleteEvent){
-                handleFileEvent((VFileDeleteEvent) event);
-            } else if (event instanceof  VFileMoveEvent){
-                handleFileEvent((VFileMoveEvent) event);
-            }
-            // TODO: verify if interesting to implement
-            /* else if (event instanceof VFileContentChangeEvent) {
-                handleFileEvent((VFileContentChangeEvent) event);
-            } */
-            else {
-                handleFileEvent(event);
-            }
-        }
-
-    }
-
-    private void handleFileEvent(VFileDeleteEvent event){
+    public void handleFileEvent(VFileDeleteEvent event){
         System.out.println("DELETE: " + event.getFile().getPath());
         String fileName = event.getFile().getPath();
         DeleteFileMessage dfMsg = new DeleteFileMessage(contentChangeService.getProjectIndependentPath(fileName));
         communicationService.sendMessage(dfMsg);
         communicationService.showNotification("DELETE " + event.getFile().getName());
     }
-    private void handleFileEvent(VFileMoveEvent event){
+
+    @Override
+    public void handleFileEvent(VFileMoveEvent event){
         System.out.println("MOVE: " + event.getOldPath() + " to " + event.getNewPath());
         String oldPath = event.getOldPath();
         String newPath = event.getNewPath();
@@ -69,7 +39,9 @@ public class FileChangeListener implements BulkFileListener {
         communicationService.sendMessage(mvMsg);
         communicationService.showNotification("MOVE " + event.getOldPath() + " to " + event.getNewPath());
     }
-    private void handleFileEvent(VFileCopyEvent event){
+
+    @Override
+    public void handleFileEvent(VFileCopyEvent event){
         String oldPath = event.getFile().getPath();
         String newPath = event.getNewParent().getPath() + "/" + event.getNewChildName();
         System.out.println("COPY " + oldPath + " => " + newPath);
@@ -91,7 +63,11 @@ public class FileChangeListener implements BulkFileListener {
         }
         communicationService.showNotification("COPY" + event.getNewParent() + " " + event.getNewChildName());
     }
-    private void handleFileEvent(VFilePropertyChangeEvent event){
+
+    @Override
+    public void handleFileEvent(VFilePropertyChangeEvent event){
+        System.out.println("VFilePropertyChangeEvent");
+
         String property = event.getPropertyName();
         String newPath = event.getNewPath();
         String oldPath = event.getOldPath();
@@ -101,11 +77,17 @@ public class FileChangeListener implements BulkFileListener {
             communicationService.sendMessage(rnMsg);
             System.out.println("CHANGE NAME: " + oldPath + " => " + newPath);
             communicationService.showNotification("PROPERTY CHANGE " + property + "\n" + newPath + " from " + oldPath);
+        } else {
+            System.out.println("no match propertychange");
         }
     }
-    private void handleFileEvent(VFileCreateEvent event){
+
+    @Override
+    public void handleFileEvent(VFileCreateEvent event){
         VirtualFile file = event.getFile();
-        String fileName = event.getFile().getPath();
+        if(file == null) return;
+        
+        String fileName = file.getPath();
         CreateFileMessage cfMsg = new CreateFileMessage(contentChangeService.getProjectIndependentPath(fileName),
                 file.isDirectory());
 
@@ -114,7 +96,10 @@ public class FileChangeListener implements BulkFileListener {
         communicationService.showNotification("CREATE: " + fileName);
 
     }
-    private void handleFileEvent(VFileEvent event){
+
+    @Override
+    public void handleFileEvent(VFileEvent event){
+        System.out.println("Unhandled event: " + event.getClass());
         communicationService.showNotification( "Unhandled event: " + event.getClass());
     }
 }
